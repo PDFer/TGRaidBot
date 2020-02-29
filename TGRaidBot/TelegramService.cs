@@ -16,7 +16,7 @@ using Telegram.Bot.Types.Enums;
 
 namespace TGRaidBot
 {
-    public class TelegramService : Service, ISender
+    public class TelegramService : Service
     {
         private string _token;
 
@@ -39,8 +39,7 @@ namespace TGRaidBot
         
 
 
-        [XmlIgnore]
-        public Collection<Raid> Raids { get; private set; } = new Collection<Raid>();
+        
 
         [XmlIgnore]
         private TelegramBotClient Bot { get; set; }
@@ -49,49 +48,12 @@ namespace TGRaidBot
         private readonly int RaidikaluTesti = -258669304;
         private readonly long HerwoodRaid = -1001127957863;
 
-        public TelegramService()
-        {
-            LoadRaids();
-        }
 
-        private void LoadRaids()
-        {
-            if (File.Exists("RaidState.json"))
-            {
-                var jsonState = File.ReadAllText("RaidState.json");
-                if (!string.IsNullOrWhiteSpace(jsonState))
-                {
-                    Raids = JsonConvert.DeserializeObject<Collection<Raid>>(jsonState);
-                    var raidToRemove = Raids.FirstOrDefault(r => r.EndTime < DateTime.Now);
-                    while (raidToRemove != null)
-                    {
-                        Raids.Remove(raidToRemove);
-                        raidToRemove = Raids.FirstOrDefault(r => r.EndTime < DateTime.Now);
-                    }
-                }
-            }
-        }
 
-        public void OnMessageReceived(object sender, DataEventArgs args)
-        {
-            ParseMessage(args.Message);
-        }
 
-        public void ParseMessage(EventMessage eventMessage)
-        {
-            Raid raid = null;
-            if (eventMessage != null && eventMessage.Event == EventMessage.EventType.Raid)
-            {
-                raid = ParseRaid(eventMessage.Data);
-            }
-            else if (eventMessage != null && eventMessage.Event == EventMessage.EventType.Attendance)
-            {
-                raid = ParseAttendance(eventMessage.Data);
-            }
-            Send(raid);
-        }
+        
 
-        public string GetStatus()
+        public override string GetStatus()
         {
             var result = Bot.GetMeAsync();
             result.Wait();
@@ -105,176 +67,32 @@ namespace TGRaidBot
             return resultText;
         }
 
-        public void Save()
+        public override void Save()
         {
             var serialized = JsonConvert.SerializeObject(Raids);
             File.WriteAllText("RaidState.json", serialized);
         }
 
 
-        private Raid ParseRaid(EventData data)
-        {
-            if (data == null || !Channels.Any(ch => ch.Gyms.Any(gym => gym.Contains(data.Gym)))) return null;
-
-            if (!data.Start.HasValue && !data.End.HasValue)
-            {
-                Console.WriteLine("No Start or End time.");
-                return null;
-            }
-
-            DateTime start = DateTimeOffset.FromUnixTimeSeconds(data.Start.GetValueOrDefault()).LocalDateTime;
-            DateTime end = DateTimeOffset.FromUnixTimeSeconds(data.End.GetValueOrDefault()).LocalDateTime;
-
-            if (data.Start.HasValue && !data.End.HasValue)
-            {
-                end = start + new TimeSpan(0, 45, 0);
-            }
-            else if (!data.Start.HasValue)
-            {
-                start = end - new TimeSpan(0, 45, 0);
-            }
-
-            if (end < DateTime.Now) return null;
-
-            var raid = Raids.FirstOrDefault(r => r.Id == data.Raid);
-            if (raid != null)
-            {
-                raid.Pokemon = data.Pokemon;
-                raid.Tier = data.Tier.GetValueOrDefault();
-                raid.StartTime = start;
-                raid.EndTime = end;
-            }
-            else
-            {
-                raid = new Raid(data.Raid, data.Gym)
-                {
-                    Pokemon = data.Pokemon,
-                    Tier = data.Tier.GetValueOrDefault(),
-                    StartTime = start,
-                    EndTime = end
-                };
-                Raids.Add(raid);
-            }
-            
-            var raidToRemove = Raids.FirstOrDefault(r => r.EndTime < DateTime.Now);
-            var currentRaidRemoved = false;
-            while (raidToRemove != null)
-            {
-                Raids.Remove(raidToRemove);
-                if (raidToRemove == raid)
-                {
-                    currentRaidRemoved = true;
-                }
-                raidToRemove = Raids.FirstOrDefault(r => r.EndTime < DateTime.Now);
-            }
-
-            if (currentRaidRemoved)
-            {
-                return null;
-            }
-
-            return raid;
-        }
-
-        private Raid ParseAttendance(EventData data)
-        {
-            var raid = Raids.FirstOrDefault(r => r.Id == data.Raid);
-            if (raid == null) return null;
-
-            if (string.IsNullOrWhiteSpace(data.Submitter)) return null;
-            raid.AddAttendee(data.Submitter, data.Time);
-            return raid;
-        }
-
-        private async void Send(Raid raid)
+        
+        
+        protected override async void Send(Raid raid)
         {
             if ( raid == null || !Raids.Contains(raid)) return;
 
-            string message = "";
-            //if (raid.RaidInfoIsDirty)
-            //{
-                message =
-                    $"T{raid.Tier} raid salilla <a href=\"https://raidikalu.herokuapp.com/#raidi-{raid.Id}\">{raid.Name}</a>:";
-                if (!string.IsNullOrWhiteSpace(raid.Pokemon))
-                {
-                    message = $"{message} {raid.Pokemon},";
-                }
+            var link = $"< a href =\"https://raidikalu.herokuapp.com/#raidi-{raid.Id}\">{raid.Name}</a>";
 
-                if (raid.StartTime > DateTime.Now)
-                {
-                    message = $"{message} alkaa {raid.StartTime.Hour}:{raid.StartTime.Minute:D2}";
-                }
-                else
-                {
-                    message = $"{message} loppuu {raid.EndTime.Hour}:{raid.EndTime.Minute:D2}";
-                }
-                raid.RaidInfoIsDirty = false;
-                //if (raid.Message != null)
-                //{
-                //    var splitMsg = raid.Message.Text.Split('\n');
-                //    if (splitMsg.Length > 1)
-                //    {
-                //        message = $"{message}\n{splitMsg[1]}";
-                //    }
-
-                //    var editResult = await Bot.EditMessageTextAsync(ChatId, raid.Message.MessageId, message, ParseMode.Html, true);
-                //    raid.Message = editResult;
-                //}
-                //else
-                //{
-                //    message = $"{message}\n  Ilmoittautuneita  0";
-                //    var result = await Bot.SendTextMessageAsync(ChatId, message, ParseMode.Html, true,
-                //        DateTime.Now.Hour < 9 || DateTime.Now.Hour > 22);
-                //    raid.Message = result;
-                //}
-            //}
-
+            var message = raid.ComposeMessage(link);
             
-
-            message = $"{message}\n  Ilmoittautuneita";
-
-            if (raid.Attendance.Count == 0)
-            {
-                message = $"{message}  0";
-            }
-            else
-            {
-                var times = new Dictionary<string, int>();
-                foreach (var attendee in raid.Attendance)
-                {
-                    if (attendee.Key == null || attendee.Value == null) continue;
-
-                    if (!times.ContainsKey(attendee.Value))
-                    {
-                        times[attendee.Value] = 1;
-                    }
-                    else
-                    {
-                        times[attendee.Value] = times[attendee.Value] + 1;
-                    }
-                }
-                var sortedTimes = times.Keys.ToList();
-                sortedTimes.Sort();
-                foreach (var sortedTime in sortedTimes)
-                {
-                    message = $"{message}  {sortedTime} ({times[sortedTime]})";
-                }
-            }
-
-            raid.AttendanceIsDirty = false;
-            raid.LastAttendanceUpdate = DateTime.Now;
-            raid.PendingSend = false;
-
             bool useDelay = false;
             if (raid.Messages.Any())
             {
-                
                 try
                 {
                     useDelay = raid.Messages.Count > 25;
                     foreach (var raidMessage in raid.Messages)
                     {
-                        var editResult = await Bot.EditMessageTextAsync(raidMessage.Chat.Id, raidMessage.MessageId, message,
+                        var editResult = await Bot.EditMessageTextAsync(raidMessage.ChatId, raidMessage.MessageId, message,
                             ParseMode.Html, true);
                         if (useDelay)
                         {
@@ -296,8 +114,8 @@ namespace TGRaidBot
                     useDelay = sendChannels.Count() > 25;
                     foreach (var serviceChannel in sendChannels)
                     {
-                        raid.Messages.Add(await Bot.SendTextMessageAsync(serviceChannel.Id, message, ParseMode.Html, true,
-                            DateTime.Now.Hour < 9 || DateTime.Now.Hour > 22));
+                        raid.Messages.Add(new TGMessage(await Bot.SendTextMessageAsync(serviceChannel.Id, message, ParseMode.Html, true,
+                            DateTime.Now.Hour < 9 || DateTime.Now.Hour > 22)));
                         if (useDelay)
                         {
                             Task.Delay(200).Wait();

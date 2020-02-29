@@ -8,7 +8,9 @@ namespace TGRaidBot
     public class RaidBotConfig
     {
         [XmlElement("Telegram", Type = (typeof(TelegramService)))]
+        [XmlElement("Discord", Type = (typeof(DiscordService)))]
         public List<Service> Services { get; } = new List<Service>();
+
 
         public RaidBotConfig()
         {

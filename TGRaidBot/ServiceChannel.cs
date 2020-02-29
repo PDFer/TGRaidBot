@@ -16,5 +16,7 @@ namespace TGRaidBot
 
         public List<long> Operators { get; } = new List<long>();
 
+        //public List<>
+
     }
 }

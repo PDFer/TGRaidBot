@@ -81,7 +81,7 @@ namespace TGRaidBot
             }
         }
 
-        public List<Message> Messages { get; } = new List<Message>();
+        public List<IMessage> Messages { get; } = new List<IMessage>();
 
         public bool RaidInfoIsDirty { get; set; }
 
@@ -134,6 +134,86 @@ namespace TGRaidBot
             }
 
             return AttendanceIsDirty;
+        }
+
+        public string ComposeMessage(string link)
+        {
+            string message = "";
+            //if (raid.RaidInfoIsDirty)
+            //{
+            message =
+                $"T{Tier} raid salilla {link}:";
+            if (!string.IsNullOrWhiteSpace(Pokemon))
+            {
+                message = $"{message} {Pokemon},";
+            }
+
+            if (StartTime > DateTime.Now)
+            {
+                message = $"{message} alkaa {StartTime.Hour}:{StartTime.Minute:D2}";
+            }
+            else
+            {
+                message = $"{message} loppuu {EndTime.Hour}:{EndTime.Minute:D2}";
+            }
+            RaidInfoIsDirty = false;
+            //if (raid.Message != null)
+            //{
+            //    var splitMsg = raid.Message.Text.Split('\n');
+            //    if (splitMsg.Length > 1)
+            //    {
+            //        message = $"{message}\n{splitMsg[1]}";
+            //    }
+
+            //    var editResult = await Bot.EditMessageTextAsync(ChatId, raid.Message.MessageId, message, ParseMode.Html, true);
+            //    raid.Message = editResult;
+            //}
+            //else
+            //{
+            //    message = $"{message}\n  Ilmoittautuneita  0";
+            //    var result = await Bot.SendTextMessageAsync(ChatId, message, ParseMode.Html, true,
+            //        DateTime.Now.Hour < 9 || DateTime.Now.Hour > 22);
+            //    raid.Message = result;
+            //}
+            //}
+
+
+
+            message = $"{message}\n  Ilmoittautuneita";
+
+            if (Attendance.Count == 0)
+            {
+                message = $"{message}  0";
+            }
+            else
+            {
+                var times = new Dictionary<string, int>();
+                foreach (var attendee in Attendance)
+                {
+                    if (attendee.Key == null || attendee.Value == null) continue;
+
+                    if (!times.ContainsKey(attendee.Value))
+                    {
+                        times[attendee.Value] = 1;
+                    }
+                    else
+                    {
+                        times[attendee.Value] = times[attendee.Value] + 1;
+                    }
+                }
+                var sortedTimes = times.Keys.ToList();
+                sortedTimes.Sort();
+                foreach (var sortedTime in sortedTimes)
+                {
+                    message = $"{message}  {sortedTime} ({times[sortedTime]})";
+                }
+            }
+
+            AttendanceIsDirty = false;
+            LastAttendanceUpdate = DateTime.Now;
+            PendingSend = false;
+
+            return message;
         }
     }
 }
