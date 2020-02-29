@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TGRaidBot;
 
@@ -12,7 +14,35 @@ namespace TGRaidBotTests
         [TestMethod]
         public void ParseMessage_WithRaid_Success()
         {
-            TimeSpan serverOffset = TimeZoneInfo.Local.GetUtcOffset(DateTimeOffset.Now);
+            RaidBotConfig services;
+            var serializer = new XmlSerializer(typeof(RaidBotConfig));
+            using (var reader = new StreamReader("RaidBotConfig.xml"))
+            {
+                services = serializer.Deserialize(reader) as RaidBotConfig;
+            }
+            //TimeSpan serverOffset = TimeZoneInfo.Local.GetUtcOffset(DateTimeOffset.Now);
+
+            Task.Delay(2000).Wait();
+
+            EventMessage message = new EventMessage
+            {
+                Data = new EventData
+                {
+                    Gym = "testi",
+                    Start = (int)DateTime.UtcNow.AddHours(1).Subtract(DateTime.UnixEpoch).TotalSeconds,
+                    End = (int)DateTime.UtcNow.AddHours(2).Subtract(DateTime.UnixEpoch).TotalSeconds,
+                    Pokemon = "Hippiäinen",
+                    Tier = 4
+                },
+                Event = EventMessage.EventType.Raid
+            };
+
+            foreach(var service in services.Services)
+            {
+                service.OnMessageReceived(this, new DataEventArgs { Message = message });
+            }
+
+            Task.Delay(3000);
 
             //var raidTestMessage =
             //    $"{{ \"event\": \"raid\", \"message\": \"Raidi 91196 päivitetty\", \"data\": {{ \"raid\": 91187, \"gym\": \"Keinupuisto\", \"pokemon\": \"Regice\", \"tier\": 5, \"lat\": \"61.493526\", \"lng\": \"23.788385\", \"start\": {new DateTimeOffset(DateTime.Now).ToUnixTimeSeconds()}, \"end\": {new DateTimeOffset(DateTime.Now + TimeSpan.FromMinutes(45)).ToUnixTimeSeconds()}, \"created\": false}} }}";
@@ -34,6 +64,7 @@ namespace TGRaidBotTests
 
             //var attendanceTestMessage6 =
             //    "{\"event\": \"attendance\", \"message\": \"Anonyymi 5177 tulee raidille 16:40\", \"data\": {\"raid\": 91187, \"choice\": 3, \"time\": \"\", \"submitter\": \"Anonyymi 5177\"}}";
+
 
             //var tgTest = new TelegramService();
             //tgTest.ParseMessage(raidTestMessage);

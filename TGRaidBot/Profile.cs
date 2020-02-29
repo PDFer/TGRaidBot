@@ -4,7 +4,11 @@ using System.Text;
 
 namespace TGRaidBot
 {
-    class Profile
+    public class Profile
     {
+        public string Name { get; set; }
+
+        public List<string> Gyms { get; set; }
+
     }
 }

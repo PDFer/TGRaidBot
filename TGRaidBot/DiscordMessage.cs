@@ -10,7 +10,7 @@ namespace TGRaidBot
         public long ChatId { get; set; }
         public object Content { get; set; }
 
-        public DiscordMessage(Discord.Rest.RestUserMessage message)
+        public DiscordMessage(Discord.IMessage message)
         {
             //MessageId = message.Id;
             Content = message;
