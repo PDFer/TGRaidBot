@@ -43,15 +43,7 @@ namespace TGRaidBot
 
         [XmlIgnore]
         private TelegramBotClient Bot { get; set; }
-
-        private readonly int petriChatId = 416974747;
-        private readonly int RaidikaluTesti = -258669304;
-        private readonly long HerwoodRaid = -1001127957863;
-
-
-
-
-        
+       
 
         public override string GetStatus()
         {
@@ -80,7 +72,7 @@ namespace TGRaidBot
         {
             if ( raid == null || !Raids.Contains(raid)) return;
 
-            var link = $"< a href =\"https://raidikalu.herokuapp.com/#raidi-{raid.Id}\">{raid.Name}</a>";
+            var link = $"<a href =\"https://raidikalu.herokuapp.com/#raidi-{raid.Id}\">{raid.Name}</a>";
 
             var message = raid.ComposeMessage(link);
             
