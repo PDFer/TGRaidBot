@@ -83,7 +83,7 @@ namespace TGRaidBot
                 case "!start":
                 case "!help":
                     await message.Channel.SendMessageAsync(
-                        "Voit hallita haluamiasi hälytyksiä lähettällä yksityisviestillä minulle seuraavia komentoja: \n !add Salin Nimi  - Lisää salin seurantaan. \n !remove Salin Nimi  - Poistaa salin seurannasta.\n !list  - Listaa seuratut salit.");
+                        "Voit hallita haluamiasi hälytyksiä lähettällä yksityisviestillä minulle seuraavia komentoja: \n !add Salin Nimi  - Lisää salin seurantaan. \n !remove Salin Nimi  - Poistaa salin seurannasta.\n !list  - Listaa seuratut salit. \n !setprofile - Aseta profiili");
                     break;
                 case "!list":
                     requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
@@ -169,6 +169,66 @@ namespace TGRaidBot
                         break;
                     }
                     break;
+                case "!setprofile":
+                    if (messageText.Length == 1)
+                    {
+                        await message.Channel.SendMessageAsync("Anna profiilin nimi. Esim: !SetProfile Työ.");
+                    }
+                    requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
+                    var splitMessageText = messageText[1].Split(" ", 2);
+                    int duration = 0;
+                    if (splitMessageText.Length > 1 && int.TryParse(splitMessageText[1], out duration))
+                    { }
+                    if (!requestChannel.SetProfile(splitMessageText[0], duration))
+                    {
+                        await message.Channel.SendMessageAsync("Kyseistä profiilia ei löydy.");
+                    }
+                    else
+                    {
+                        await message.Channel.SendMessageAsync($"Profiili {splitMessageText[0]} asetettu aktiiviseksi.");
+                        if (duration > 0)
+                        {
+                            await message.Channel.SendMessageAsync($"Vakioprofiili asetetaan takaisin {duration} {ServiceChannel.GetTimerUnit()} päästä.");
+                        }
+
+                    }
+
+                    break;
+                case "!listprofiles":
+                    requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
+                    string profiilit = "";
+                    foreach(var profiili in requestChannel.Profiles)
+                    {
+                        profiilit += $"{profiili.Name} ";
+                    }
+                    break;
+            }
+        }
+
+        private async void ProfileTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            var serviceChannel = sender as ServiceChannel;
+            if (serviceChannel != null)
+            {
+                var channel = client.GetChannel((ulong)serviceChannel.Id);
+                if (channel == null)
+                {
+                    var splitName = serviceChannel.Name.Split('#');
+                    if (splitName.Length != 2)
+                    {
+                        return;
+                    }
+                    var user = client.GetUser(splitName[0].Substring(1), splitName[1]);
+                    if (user != null)
+                    {
+                        var dmchannel = user.GetOrCreateDMChannelAsync().Result;
+                        await dmchannel.SendMessageAsync("Vakioprofiili on palautettu.");
+                    }
+                }
+                else if (channel is SocketTextChannel textChannel)
+                {
+                    await textChannel.SendMessageAsync("Vakioprofiili on palautettu.");
+                }
             }
         }
 
@@ -296,6 +356,7 @@ namespace TGRaidBot
                     Console.WriteLine($"Error writing message: {e.Message}");
                 }
             }
+           
             //throw new NotImplementedException();
         }
     }

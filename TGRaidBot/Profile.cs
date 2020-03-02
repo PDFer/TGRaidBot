@@ -8,7 +8,12 @@ namespace TGRaidBot
     {
         public string Name { get; set; }
 
+        public bool Default { get; set; }
+
         public List<string> Gyms { get; set; }
+
+
+
 
     }
 }
