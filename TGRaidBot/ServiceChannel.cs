@@ -57,6 +57,22 @@ namespace TGRaidBot
             return true;
         }
 
+        public void SaveProfile(string profileName)
+        {
+            var profile = Profiles.FirstOrDefault(p => p.Name == profileName);
+            if (profile != null)
+            {
+                profile = new Profile { Name = profileName };
+                profile.Gyms.AddRange(Gyms);
+            }
+            else
+            {
+                profile.Gyms.Clear();
+                profile.Gyms.AddRange(Gyms);
+            }
+
+        }
+
         public static string GetTimerUnit()
         {
             switch (ProfileTimerUnit)

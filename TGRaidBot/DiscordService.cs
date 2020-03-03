@@ -35,6 +35,8 @@ namespace TGRaidBot
 
         }
 
+        protected override string Prefix => "!";
+
         public DiscordService()
         {
             client = new DiscordSocketClient();
@@ -76,132 +78,21 @@ namespace TGRaidBot
 
             var messageText = message.Content.Split(' ', 2);
 
-            ServiceChannel requestChannel;
+            var requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
 
-            switch (messageText[0].ToLower())
+            if (requestChannel == null)
             {
-                case "!start":
-                case "!help":
-                    await message.Channel.SendMessageAsync(
-                        "Voit hallita haluamiasi hälytyksiä lähettällä yksityisviestillä minulle seuraavia komentoja: \n !add Salin Nimi  - Lisää salin seurantaan. \n !remove Salin Nimi  - Poistaa salin seurannasta.\n !list  - Listaa seuratut salit. \n !setprofile - Aseta profiili");
-                    break;
-                case "!list":
-                    requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
-                    if (requestChannel == null || !requestChannel.Gyms.Any())
-                    {
-                        await message.Channel.SendMessageAsync("Sinulla ei ole yhtään salia seurannassa.");
-                    }
-                    else
-                    {
-                        string reply = requestChannel.Gyms.First();
-                        foreach (var requestChannelGym in requestChannel.Gyms.Skip(1))
-                        {
-                            reply = $"{reply}, {requestChannelGym}";
-                        }
+                requestChannel = new ServiceChannel { Id = (long)message.Channel.Id, Name = message.Channel.Name };
+            }
 
-                        await message.Channel.SendMessageAsync(reply);
-                    }
+            if (messageText.Length == 1)
+            {
+                await ProcessCommand(requestChannel, (long)message.Author.Id, messageText[0].Substring(1));
+            }
+            else
+            {
+                await ProcessCommand(requestChannel, (long)message.Author.Id, messageText[0].Substring(1), messageText[1]);
 
-                    break;
-                case "!add":
-                    requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
-                    if (message.Content.Length < 2) break;
-
-                    if (requestChannel == null)
-                    {
-                        requestChannel = new ServiceChannel
-                        {
-                            Id = (long)message.Channel.Id
-                        };
-                        //if (update.Message.Chat.Type == ChatType.Private)
-                        //{
-                        //    requestChannel.Name = update.Message.Chat.Username;
-                        //}
-                        //else
-                        //{
-                            requestChannel.Name = message.Channel.Name;
-                        //}
-                        requestChannel.Gyms.Add(messageText[1]);
-                        Channels.Add(requestChannel);
-                        await message.Channel.SendMessageAsync($"{messageText[1]} lisätty.");
-                        SaveGyms();
-                    }
-                    else
-                    {
-                        if (requestChannel.Operators.Any() && !requestChannel.Operators.Contains((long)message.Author.Id))
-                        {
-                            await message.Channel.SendMessageAsync("Sinulla ei ole oikeuksia lisätä saleja.");
-                            break;
-                        }
-                        if (!requestChannel.Gyms.Contains(messageText[1]))
-                        {
-                            requestChannel.Gyms.Add(messageText[1]);
-                            await message.Channel.SendMessageAsync($"{messageText[1]} lisätty.");
-                            SaveGyms();
-                        }
-                    }
-                    break;
-                case "!remove":
-                    requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
-                    if (requestChannel == null) break;
-
-                    if (requestChannel.Operators.Any() && !requestChannel.Operators.Contains((long)message.Author.Id))
-                    {
-                        await message.Channel.SendMessageAsync("Sinulla ei ole oikeuksia poistaa saleja.");
-                        break;
-                    }
-
-                    if (messageText.Length < 2)
-                    {
-                        await message.Channel.SendMessageAsync("Anna poistettavan salin nimi komennon perään Esim. /remove Esimerkkisali Numero 1");
-                        break;
-                    }
-
-                    if (requestChannel.Gyms.Contains(messageText[1]))
-                    {
-                        requestChannel.Gyms.Remove(messageText[1]);
-                        SaveGyms();
-                        await message.Channel.SendMessageAsync($"Sali {messageText[1]} poistettu seurannasta.");
-                    }
-                    else
-                    {
-                        await message.Channel.SendMessageAsync($"Sinulla ei ole salia {messageText[1]} seurannassa. Tarkista kirjoititko salin nimen oikein.");
-                        break;
-                    }
-                    break;
-                case "!setprofile":
-                    if (messageText.Length == 1)
-                    {
-                        await message.Channel.SendMessageAsync("Anna profiilin nimi. Esim: !SetProfile Työ.");
-                    }
-                    requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
-                    var splitMessageText = messageText[1].Split(" ", 2);
-                    int duration = 0;
-                    if (splitMessageText.Length > 1 && int.TryParse(splitMessageText[1], out duration))
-                    { }
-                    if (!requestChannel.SetProfile(splitMessageText[0], duration))
-                    {
-                        await message.Channel.SendMessageAsync("Kyseistä profiilia ei löydy.");
-                    }
-                    else
-                    {
-                        await message.Channel.SendMessageAsync($"Profiili {splitMessageText[0]} asetettu aktiiviseksi.");
-                        if (duration > 0)
-                        {
-                            await message.Channel.SendMessageAsync($"Vakioprofiili asetetaan takaisin {duration} {ServiceChannel.GetTimerUnit()} päästä.");
-                        }
-
-                    }
-
-                    break;
-                case "!listprofiles":
-                    requestChannel = Channels.FirstOrDefault(ch => ch.Id == (long)message.Channel.Id);
-                    string profiilit = "";
-                    foreach(var profiili in requestChannel.Profiles)
-                    {
-                        profiilit += $"{profiili.Name} ";
-                    }
-                    break;
             }
         }
 
@@ -280,7 +171,7 @@ namespace TGRaidBot
             return Task.CompletedTask;
         }
 
-        protected async override void Send(Raid raid)
+        protected async override Task Send(Raid raid)
         {
             if (raid == null || !Raids.Contains(raid)) return;
 
@@ -357,6 +248,31 @@ namespace TGRaidBot
                 }
             }
            
+            //throw new NotImplementedException();
+        }
+
+        protected async override Task Send(ServiceChannel serviceChannel, string message)
+        {
+            var channel = client.GetChannel((ulong)serviceChannel.Id);
+            if (channel is ITextChannel ichannel)
+            {
+                await ichannel.SendMessageAsync(message);
+                //var splitName = serviceChannel.Name.Split('#');
+                //if (splitName.Length != 2)
+                //{
+                //    return;
+                //}
+                //var user = client.GetUser(splitName[0].Substring(1), splitName[1]);
+                //if (user != null)
+                //{
+                //    var dmchannel = user.GetOrCreateDMChannelAsync().Result;
+                //    await dmchannel.SendMessageAsync(message);
+                //}
+            }
+            //else if (channel is SocketTextChannel textChannel)
+            //{
+            //    await textChannel.SendMessageAsync(message);
+            //}
             //throw new NotImplementedException();
         }
     }
