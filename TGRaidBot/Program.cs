@@ -15,7 +15,7 @@ namespace TGRaidBot
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Starting Telegram Raid Bot v1.1.1");
+            Console.WriteLine("Starting Telegram Raid Bot v1.2.0");
 
             //IConfiguration config = new ConfigurationBuilder()
             //    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -28,6 +28,7 @@ namespace TGRaidBot
             {
                 _raidBotConfig = serializer.Deserialize(reader) as RaidBotConfig;
             }
+            _raidBotConfig.Initialize();
 
             CancellationTokenSource tokenSource = new CancellationTokenSource();
 

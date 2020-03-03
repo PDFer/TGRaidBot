@@ -20,6 +20,8 @@ namespace TGRaidBot
 
         public virtual string Token { get; set; }
 
+        public long Master { get; set; }
+
         public List<ServiceChannel> Channels { get; } = new List<ServiceChannel>();
 
         [XmlIgnore]
@@ -71,8 +73,11 @@ $@"Voit hallita haluamiasi hälytyksiä lähettällä yksityisviestillä minulle
 {Prefix}remove Salin Nimi  - Poistaa salin seurannasta.
 {Prefix}list  - Listaa seuratut salit.
 {Prefix}set ProfiiliNimi aika - Asettaa profiilin, vapaaehtoiseen aikakentään voi määrittää kuinka monta {ServiceChannel.GetTimerUnit()} profiili pysyy päällä.
-{Prefix}profiles
-{Prefix}save ProfiiliNimi - Tallentaa tämän hetkiset salit profiiliin");
+{Prefix}profiles - Listaa profiilit
+{Prefix}save ProfiiliNimi - Tallentaa tämän hetkiset salit profiiliin
+{Prefix}setdefault ProfiiliNimi - Asettaa halutun profiilin oletukseksi. Oletusprofiili ladataan aluksi ja kun asetetun profiilin aika umpeutuu.
+{Prefix}removeprofile ProfiiliNimi - Poistaa profiilin.");
+
                     break;
                 case "list":
 
@@ -145,7 +150,7 @@ $@"Voit hallita haluamiasi hälytyksiä lähettällä yksityisviestillä minulle
                 case "set":
                     if (parameters.Length < 1)
                     {
-                        await Send(requestChannel, $"Anna profiilin nimi. Esim: {Prefix}SetProfile Työ.");
+                        await Send(requestChannel, $"Anna profiilin nimi. Esim: {Prefix}Set Työ");
                     }
                     var splitMessageText = parameters[0].Split(" ", 2);
                     int duration = 0;
@@ -194,6 +199,45 @@ $@"Voit hallita haluamiasi hälytyksiä lähettällä yksityisviestillä minulle
                     SaveGyms();
                     await Send(requestChannel, $"Profiili {parameters[0]} tallennettu");
                     break;
+                case "setdefault":
+                    if (parameters.Length < 1)
+                    {
+                        await Send(requestChannel, $"Anna profiilin nimi. Esim: {Prefix}SetDefault Koti");
+                    }
+                    if (requestChannel.SetDefault(parameters[0]))
+                    {
+                        await Send(requestChannel, $"Profiili {parameters[0]} asetettu oletukseksi.");
+                    }
+                    else
+                    {
+                        await Send(requestChannel, $"Profiilia {parameters[0]} ei löytynyt. Tarkista kirjoititko nimen oikein.");
+                    }
+                    break;
+                case "removeprofile":
+                    if (parameters.Length < 1)
+                    {
+                        await Send(requestChannel, $"Anna profiilin nimi. Esim: {Prefix}removeprofile Koti");
+                    }
+                    if (requestChannel.RemoveProfile(parameters[0]))
+                    {
+                        await Send(requestChannel, $"Profiili {parameters[0]} poistettu.");
+                    }
+                    else
+                    {
+                        await Send(requestChannel, $"Profiilia {parameters[0]} ei löytynyt. Tarkista kirjoititko nimen oikein.");
+                    }
+                    break;
+                case "addoperator":
+                    if (userId != Master)
+                        break;
+
+                    if (parameters.Length < 1)
+                    {
+                        await Send(requestChannel, $"Anna käyttäjän nimi");
+                    }
+
+                    break;
+
             }
         }
 

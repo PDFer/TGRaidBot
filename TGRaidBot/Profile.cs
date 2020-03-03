@@ -10,7 +10,7 @@ namespace TGRaidBot
 
         public bool Default { get; set; }
 
-        public List<string> Gyms { get; set; }
+        public List<string> Gyms { get; set; } = new List<string>();
 
 
 

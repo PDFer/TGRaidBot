@@ -25,6 +25,7 @@ namespace TGRaidBot
 
         public string Nick { get; set; }
 
+        [XmlIgnore]
         public List<string> Gyms { get; } = new List<string>();
 
         public List<Profile> Profiles { get; } = new List<Profile>();
@@ -60,10 +61,17 @@ namespace TGRaidBot
         public void SaveProfile(string profileName)
         {
             var profile = Profiles.FirstOrDefault(p => p.Name == profileName);
-            if (profile != null)
+            if (profile == null)
             {
+                
                 profile = new Profile { Name = profileName };
+                if (!Profiles.Any())
+                {
+                    // Eka asetetaan vakioksi
+                    profile.Default = true;
+                }
                 profile.Gyms.AddRange(Gyms);
+                Profiles.Add(profile);
             }
             else
             {
@@ -71,6 +79,28 @@ namespace TGRaidBot
                 profile.Gyms.AddRange(Gyms);
             }
 
+        }
+
+        public bool SetDefault(string profileName)
+        {
+            var profile = Profiles.FirstOrDefault(p => p.Name == profileName);
+            if (profile == null)
+            {
+                return false;
+            }
+            profile.Default = true;
+            return true;
+        }
+
+        public bool RemoveProfile(string profileName)
+        {
+            var profile = Profiles.FirstOrDefault(p => p.Name == profileName);
+            if (profile == null)
+            {
+                return false;
+            }
+            Profiles.Remove(profile);
+            return true;
         }
 
         public static string GetTimerUnit()

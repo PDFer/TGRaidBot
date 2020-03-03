@@ -254,6 +254,7 @@ namespace TGRaidBot
         protected async override Task Send(ServiceChannel serviceChannel, string message)
         {
             var channel = client.GetChannel((ulong)serviceChannel.Id);
+
             if (channel is ITextChannel ichannel)
             {
                 await ichannel.SendMessageAsync(message);
@@ -268,6 +269,10 @@ namespace TGRaidBot
                 //    var dmchannel = user.GetOrCreateDMChannelAsync().Result;
                 //    await dmchannel.SendMessageAsync(message);
                 //}
+            }
+            else if (channel is IDMChannel dmChannel)
+            {
+                dmChannel.SendMessageAsync(message);
             }
             //else if (channel is SocketTextChannel textChannel)
             //{

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 
@@ -15,6 +16,22 @@ namespace TGRaidBot
         public RaidBotConfig()
         {
 
+        }
+
+        public void Initialize()
+        {
+            foreach(var service in Services)
+            {
+                foreach(var channel in service.Channels)
+                {
+                    var profile = channel.Profiles.FirstOrDefault(p => p.Default);
+                    if (profile != null)
+                    {
+                        channel.Gyms.Clear();
+                        channel.Gyms.AddRange(profile.Gyms);
+                    }
+                }
+            }
         }
 
     }

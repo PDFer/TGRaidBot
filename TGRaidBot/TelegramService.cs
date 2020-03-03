@@ -63,9 +63,6 @@ namespace TGRaidBot
             File.WriteAllText("RaidState.json", serialized);
         }
 
-
-        
-        
         protected override async Task Send(Raid raid)
         {
             if ( raid == null || !Raids.Contains(raid)) return;
